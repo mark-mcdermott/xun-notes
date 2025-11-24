@@ -30,6 +30,8 @@ export function registerTagHandlers(): void {
       if (!tagManager) {
         return { success: false, error: 'Tag manager not initialized' };
       }
+      // Rebuild index to pick up any new tags
+      await tagManager.buildIndex();
       const tags = tagManager.getAllTags();
       return { success: true, tags };
     } catch (error: any) {

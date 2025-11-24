@@ -51,10 +51,18 @@ export interface ElectronAPI {
     >;
   };
 
-  // Publishing operations (to be implemented)
+  // Publishing operations
   publish: {
-    toBlog: (blogId: string, tag: string) => Promise<{ success: boolean; jobId: string }>;
-    getStatus: (jobId: string) => Promise<{ status: string; progress: number }>;
+    getBlogs: () => Promise<VaultResponse<{ blogs: any[] }>>;
+    getBlog: (blogId: string) => Promise<VaultResponse<{ blog: any }>>;
+    saveBlog: (blog: any) => Promise<VaultResponse>;
+    deleteBlog: (blogId: string) => Promise<VaultResponse<{ deleted: boolean }>>;
+    toBlog: (blogId: string, tag: string) => Promise<VaultResponse<{ jobId: string }>>;
+    getStatus: (jobId: string) => Promise<
+      VaultResponse<{ status: string; progress: number; steps: any[]; error?: string }>
+    >;
+    subscribe: (jobId: string, callback: (data: any) => void) => Promise<VaultResponse>;
+    unsubscribe: (jobId: string) => Promise<VaultResponse>;
   };
 }
 
@@ -87,9 +95,21 @@ const api: ElectronAPI = {
   },
 
   publish: {
+    getBlogs: () => ipcRenderer.invoke('publish:get-blogs'),
+    getBlog: (blogId: string) => ipcRenderer.invoke('publish:get-blog', blogId),
+    saveBlog: (blog: any) => ipcRenderer.invoke('publish:save-blog', blog),
+    deleteBlog: (blogId: string) => ipcRenderer.invoke('publish:delete-blog', blogId),
     toBlog: (blogId: string, tag: string) =>
       ipcRenderer.invoke('publish:to-blog', blogId, tag),
-    getStatus: (jobId: string) => ipcRenderer.invoke('publish:get-status', jobId)
+    getStatus: (jobId: string) => ipcRenderer.invoke('publish:get-status', jobId),
+    subscribe: async (jobId: string, callback: (data: any) => void) => {
+      ipcRenderer.on(`publish:progress:${jobId}`, (_event, data) => callback(data));
+      return ipcRenderer.invoke('publish:subscribe', jobId);
+    },
+    unsubscribe: (jobId: string) => {
+      ipcRenderer.removeAllListeners(`publish:progress:${jobId}`);
+      return ipcRenderer.invoke('publish:unsubscribe', jobId);
+    }
   }
 };
 

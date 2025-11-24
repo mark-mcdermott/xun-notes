@@ -14,9 +14,10 @@ interface TagViewProps {
   tag: string;
   getContent: (tag: string) => Promise<TaggedContent[]>;
   onDeleteTag?: (tag: string) => Promise<void>;
+  onPublish?: (tag: string) => void;
 }
 
-export const TagView: React.FC<TagViewProps> = ({ tag, getContent, onDeleteTag }) => {
+export const TagView: React.FC<TagViewProps> = ({ tag, getContent, onDeleteTag, onPublish }) => {
   const [content, setContent] = useState<TaggedContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +90,7 @@ export const TagView: React.FC<TagViewProps> = ({ tag, getContent, onDeleteTag }
               </button>
             )}
             <button
-              onClick={() => alert('Publishing feature coming soon!\n\nThis will publish all content tagged with ' + tag + ' to your configured blog.')}
+              onClick={() => onPublish?.(tag)}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
             >
               <span>📤</span>

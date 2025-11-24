@@ -8,6 +8,8 @@ import { TagView } from './components/TagView';
 import { DailyNotesNav } from './components/DailyNotesNav';
 import { CommandPalette } from './components/CommandPalette';
 import { Breadcrumb } from './components/Breadcrumb';
+import { PublishDialog } from './components/PublishDialog';
+import { PublishSettings } from './components/PublishSettings';
 
 type SidebarTab = 'files' | 'tags' | 'daily';
 type ViewMode = 'editor' | 'tag-view';
@@ -23,6 +25,9 @@ const App: React.FC = () => {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [dailyNoteDates, setDailyNoteDates] = useState<string[]>([]);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  const [publishTag, setPublishTag] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Load today's note on mount
   useEffect(() => {
@@ -64,6 +69,11 @@ const App: React.FC = () => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
         e.preventDefault();
         setCommandPaletteOpen(true);
+      }
+      // Cmd+, or Ctrl+, to open settings
+      if ((e.metaKey || e.ctrlKey) && e.key === ',') {
+        e.preventDefault();
+        setSettingsOpen(true);
       }
     };
 
@@ -113,6 +123,9 @@ const App: React.FC = () => {
     try {
       await writeFile(selectedFile, content);
       setFileContent(content);
+
+      // Refresh tags after save to pick up new tags
+      await refreshTags();
     } catch (err: any) {
       console.error('Failed to save file:', err);
       throw err;
@@ -160,6 +173,11 @@ const App: React.FC = () => {
     }
   };
 
+  const handlePublish = (tag: string) => {
+    setPublishTag(tag);
+    setPublishDialogOpen(true);
+  };
+
   if (loading && !fileTree) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-gray-100">
@@ -197,10 +215,35 @@ const App: React.FC = () => {
         onCreateFolder={handleCreateFolder}
       />
 
+      {/* Publish Dialog */}
+      {publishDialogOpen && publishTag && (
+        <PublishDialog
+          tag={publishTag}
+          onClose={() => {
+            setPublishDialogOpen(false);
+            setPublishTag(null);
+          }}
+        />
+      )}
+
+      {/* Settings Dialog */}
+      {settingsOpen && (
+        <PublishSettings onClose={() => setSettingsOpen(false)} />
+      )}
+
       {/* Header */}
-      <div className="h-12 bg-white border-b border-gray-200 flex items-center px-4">
-        <h1 className="text-lg font-semibold text-gray-800">Olite</h1>
-        {vaultPath && <span className="ml-4 text-xs text-gray-500">{vaultPath}</span>}
+      <div className="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4">
+        <div className="flex items-center">
+          <h1 className="text-lg font-semibold text-gray-800">Olite</h1>
+          {vaultPath && <span className="ml-4 text-xs text-gray-500">{vaultPath}</span>}
+        </div>
+        <button
+          onClick={() => setSettingsOpen(true)}
+          className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded"
+          title="Settings (Cmd+,)"
+        >
+          ⚙️ Settings
+        </button>
       </div>
 
       {/* Main content */}
@@ -281,7 +324,12 @@ const App: React.FC = () => {
               </div>
             </>
           ) : viewMode === 'tag-view' && selectedTag ? (
-            <TagView tag={selectedTag} getContent={getTagContent} onDeleteTag={handleDeleteTag} />
+            <TagView
+              tag={selectedTag}
+              getContent={getTagContent}
+              onDeleteTag={handleDeleteTag}
+              onPublish={handlePublish}
+            />
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center text-gray-500">
