@@ -35,6 +35,7 @@ import { DailyNotesNav } from './components/DailyNotesNav';
 import { CommandPalette } from './components/CommandPalette';
 import { Breadcrumb } from './components/Breadcrumb';
 import { PublishDialog } from './components/PublishDialog';
+import { PublishProgressPopup } from './components/PublishProgressPopup';
 import { SettingsPage } from './components/SettingsPage';
 import { CreateFileDialog } from './components/CreateFileDialog';
 
@@ -62,6 +63,15 @@ const App: React.FC = () => {
   const [sidebarWidth, setSidebarWidth] = useState(260);
   const [isResizing, setIsResizing] = useState(false);
   const resizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
+  const [blogs, setBlogs] = useState<Array<{ id: string; name: string }>>([]);
+
+  // Blog block publish progress state
+  const [blogBlockPublishJobId, setBlogBlockPublishJobId] = useState<string | null>(null);
+  const [blogBlockPublishStatus, setBlogBlockPublishStatus] = useState<'pending' | 'preparing' | 'pushing' | 'building' | 'deploying' | 'completed' | 'failed'>('pending');
+  const [blogBlockPublishProgress, setBlogBlockPublishProgress] = useState(0);
+  const [blogBlockPublishSteps, setBlogBlockPublishSteps] = useState<Array<{ name: string; status: 'pending' | 'in_progress' | 'completed' | 'failed'; message?: string }>>([]);
+  const [blogBlockPublishError, setBlogBlockPublishError] = useState<string | null>(null);
+  const blogBlockPublishResolveRef = useRef<((success: boolean) => void) | null>(null);
 
   // Navigation history for back/forward
   type HistoryEntry = { type: 'file'; path: string } | { type: 'tag'; tag: string } | { type: 'settings' };
@@ -183,6 +193,21 @@ const App: React.FC = () => {
     }
   }, [vaultPath, getDailyNoteDates]);
 
+  // Load blogs for editor autocomplete
+  useEffect(() => {
+    const loadBlogs = async () => {
+      try {
+        const result = await window.electronAPI.publish.getBlogs();
+        if (result.success && result.blogs) {
+          setBlogs(result.blogs);
+        }
+      } catch (err) {
+        console.error('Failed to load blogs:', err);
+      }
+    };
+    loadBlogs();
+  }, []);
+
   // Global keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -236,6 +261,35 @@ const App: React.FC = () => {
       document.body.style.userSelect = '';
     };
   }, [isResizing]);
+
+  // Subscribe to blog block publish progress
+  useEffect(() => {
+    if (!blogBlockPublishJobId) return;
+
+    const subscribeToProgress = async () => {
+      await window.electronAPI.publish.subscribe(blogBlockPublishJobId, (data: any) => {
+        setBlogBlockPublishStatus(data.status);
+        setBlogBlockPublishProgress(data.progress);
+        setBlogBlockPublishSteps(data.steps || []);
+        if (data.error) {
+          setBlogBlockPublishError(data.error);
+        }
+        // Resolve the promise when complete
+        if (data.status === 'completed' || data.status === 'failed') {
+          if (blogBlockPublishResolveRef.current) {
+            blogBlockPublishResolveRef.current(data.status === 'completed');
+            blogBlockPublishResolveRef.current = null;
+          }
+        }
+      });
+    };
+
+    subscribeToProgress();
+
+    return () => {
+      window.electronAPI.publish.unsubscribe(blogBlockPublishJobId);
+    };
+  }, [blogBlockPublishJobId]);
 
   const handleFileClick = async (path: string) => {
     try {
@@ -542,6 +596,54 @@ const App: React.FC = () => {
     setPublishDialogOpen(true);
   };
 
+  // Direct publish from blog block (with progress popup)
+  const handlePublishBlogBlock = async (blogId: string, content: string): Promise<boolean> => {
+    try {
+      // Reset state
+      setBlogBlockPublishStatus('pending');
+      setBlogBlockPublishProgress(0);
+      setBlogBlockPublishSteps([]);
+      setBlogBlockPublishError(null);
+
+      const result = await window.electronAPI.publish.toBlogDirect(blogId, content);
+
+      if (result.success && result.jobId) {
+        // Create a promise that will resolve when the job completes
+        const completionPromise = new Promise<boolean>((resolve) => {
+          blogBlockPublishResolveRef.current = resolve;
+        });
+
+        // Set the job ID to trigger subscription
+        setBlogBlockPublishJobId(result.jobId);
+
+        // Wait for completion
+        return await completionPromise;
+      } else {
+        setBlogBlockPublishError(result.error || 'Failed to start publish job');
+        setBlogBlockPublishStatus('failed');
+        setBlogBlockPublishJobId('error'); // Show popup with error
+        return false;
+      }
+    } catch (err: any) {
+      setBlogBlockPublishError(err.message || 'Failed to publish');
+      setBlogBlockPublishStatus('failed');
+      setBlogBlockPublishJobId('error'); // Show popup with error
+      return false;
+    }
+  };
+
+  // Close blog block publish popup
+  const handleCloseBlogBlockPublish = () => {
+    if (blogBlockPublishJobId && blogBlockPublishJobId !== 'error') {
+      window.electronAPI.publish.unsubscribe(blogBlockPublishJobId);
+    }
+    setBlogBlockPublishJobId(null);
+    setBlogBlockPublishStatus('pending');
+    setBlogBlockPublishProgress(0);
+    setBlogBlockPublishSteps([]);
+    setBlogBlockPublishError(null);
+  };
+
   const handleUpdateTagContent = async (filePath: string, oldContent: string, newContent: string) => {
     try {
       // Read the current file content
@@ -559,9 +661,6 @@ const App: React.FC = () => {
         setOpenTabs(prev => prev.map((tab, i) =>
           i === tabIndex && tab.type === 'file' ? { ...tab, content: updatedContent } : tab
         ));
-        if (tabIndex === activeTabIndex) {
-          setFileContent(updatedContent);
-        }
       }
     } catch (err: any) {
       console.error('Failed to update tag content:', err);
@@ -640,6 +739,17 @@ const App: React.FC = () => {
             setPublishDialogOpen(false);
             setPublishTag(null);
           }}
+        />
+      )}
+
+      {/* Blog Block Publish Progress Popup */}
+      {blogBlockPublishJobId && (
+        <PublishProgressPopup
+          status={blogBlockPublishStatus}
+          progress={blogBlockPublishProgress}
+          steps={blogBlockPublishSteps}
+          error={blogBlockPublishError}
+          onClose={handleCloseBlogBlockPublish}
         />
       )}
 
@@ -918,6 +1028,8 @@ const App: React.FC = () => {
                   filePath={selectedFile!}
                   onSave={handleSave}
                   onTagClick={handleEditorTagClick}
+                  blogs={blogs}
+                  onPublishBlogBlock={handlePublishBlogBlock}
                 />
               ) : (
                 <MarkdownEditor

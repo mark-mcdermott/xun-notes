@@ -58,11 +58,13 @@ export interface ElectronAPI {
     saveBlog: (blog: any) => Promise<VaultResponse>;
     deleteBlog: (blogId: string) => Promise<VaultResponse<{ deleted: boolean }>>;
     toBlog: (blogId: string, tag: string) => Promise<VaultResponse<{ jobId: string }>>;
+    toBlogDirect: (blogId: string, content: string) => Promise<VaultResponse<{ jobId: string }>>;
     getStatus: (jobId: string) => Promise<
       VaultResponse<{ status: string; progress: number; steps: any[]; error?: string }>
     >;
     subscribe: (jobId: string, callback: (data: any) => void) => Promise<VaultResponse>;
     unsubscribe: (jobId: string) => Promise<VaultResponse>;
+    getAverageTime: () => Promise<VaultResponse<{ averageMs: number }>>;
   };
 }
 
@@ -101,6 +103,8 @@ const api: ElectronAPI = {
     deleteBlog: (blogId: string) => ipcRenderer.invoke('publish:delete-blog', blogId),
     toBlog: (blogId: string, tag: string) =>
       ipcRenderer.invoke('publish:to-blog', blogId, tag),
+    toBlogDirect: (blogId: string, content: string) =>
+      ipcRenderer.invoke('publish:to-blog-direct', blogId, content),
     getStatus: (jobId: string) => ipcRenderer.invoke('publish:get-status', jobId),
     subscribe: async (jobId: string, callback: (data: any) => void) => {
       ipcRenderer.on(`publish:progress:${jobId}`, (_event, data) => callback(data));
@@ -109,7 +113,8 @@ const api: ElectronAPI = {
     unsubscribe: (jobId: string) => {
       ipcRenderer.removeAllListeners(`publish:progress:${jobId}`);
       return ipcRenderer.invoke('publish:unsubscribe', jobId);
-    }
+    },
+    getAverageTime: () => ipcRenderer.invoke('publish:get-average-time')
   }
 };
 

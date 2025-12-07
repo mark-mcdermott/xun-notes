@@ -3,11 +3,16 @@ import { vaultManager } from '../vault/VaultManager';
 import type { TagManager } from '../vault/TagManager';
 import { PublishManager } from '../publish/PublishManager';
 import { ConfigManager } from '../publish/ConfigManager';
+import { PublishTimingManager } from '../publish/PublishTimingManager';
 import type { BlogTarget } from '../publish/types';
 
 let publishManager: PublishManager | null = null;
 let configManager: ConfigManager | null = null;
 let tagManagerInstance: TagManager | null = null;
+let timingManager: PublishTimingManager | null = null;
+
+// Track active publish start times
+const publishStartTimes: Map<string, { startTime: number; blogId: string }> = new Map();
 
 /**
  * Set the tag manager instance
@@ -25,6 +30,7 @@ export function initializePublishManagers(vaultPath: string): void {
   }
   configManager = new ConfigManager(vaultPath);
   publishManager = new PublishManager(tagManagerInstance);
+  timingManager = new PublishTimingManager(vaultPath);
 }
 
 /**
@@ -122,6 +128,33 @@ export function registerPublishHandlers(): void {
     }
   });
 
+  // Publish to blog with direct content (from blog block)
+  ipcMain.handle('publish:to-blog-direct', async (_event, blogId: string, content: string) => {
+    try {
+      if (!publishManager || !configManager) {
+        const vaultPath = vaultManager.getVaultPath();
+        if (!vaultPath) {
+          return { success: false, error: 'Vault not initialized' };
+        }
+        initializePublishManagers(vaultPath);
+      }
+
+      const blog = await configManager!.getBlog(blogId);
+      if (!blog) {
+        return { success: false, error: 'Blog not found' };
+      }
+
+      const jobId = await publishManager!.publishDirect(blog, content);
+
+      // Track start time for this job
+      publishStartTimes.set(jobId, { startTime: Date.now(), blogId });
+
+      return { success: true, jobId };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
+
   // Get publish job status
   ipcMain.handle('publish:get-status', async (_event, jobId: string) => {
     try {
@@ -153,13 +186,23 @@ export function registerPublishHandlers(): void {
         return { success: false, error: 'Publish manager not initialized' };
       }
 
-      publishManager.onProgress(jobId, job => {
+      publishManager.onProgress(jobId, async job => {
         event.sender.send(`publish:progress:${jobId}`, {
           status: job.status,
           progress: job.progress,
           steps: job.steps,
           error: job.error
         });
+
+        // Record timing when job completes
+        if ((job.status === 'completed' || job.status === 'failed') && timingManager) {
+          const startInfo = publishStartTimes.get(jobId);
+          if (startInfo) {
+            const durationMs = Date.now() - startInfo.startTime;
+            await timingManager.recordTiming(startInfo.blogId, durationMs, job.status === 'completed');
+            publishStartTimes.delete(jobId);
+          }
+        }
       });
 
       return { success: true };
@@ -179,6 +222,24 @@ export function registerPublishHandlers(): void {
       return { success: true };
     } catch (error: any) {
       return { success: false, error: error.message };
+    }
+  });
+
+  // Get average publish time
+  ipcMain.handle('publish:get-average-time', async () => {
+    try {
+      if (!timingManager) {
+        const vaultPath = vaultManager.getVaultPath();
+        if (!vaultPath) {
+          return { success: true, averageMs: 30000 }; // Default 30 seconds
+        }
+        timingManager = new PublishTimingManager(vaultPath);
+      }
+
+      const averageMs = await timingManager.getAveragePublishTime();
+      return { success: true, averageMs };
+    } catch (error: any) {
+      return { success: true, averageMs: 30000 }; // Default on error
     }
   });
 }
