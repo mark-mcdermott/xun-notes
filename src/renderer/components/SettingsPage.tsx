@@ -17,6 +17,7 @@ interface BlogTarget {
   };
   content: {
     path: string;
+    livePostPath?: string;
     format: 'single-file' | 'multi-file';
     filename?: string;
   };
@@ -65,6 +66,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ vaultPath }) => {
       },
       content: {
         path: 'src/content/posts/',
+        livePostPath: '/posts/',
         format: 'single-file',
         filename: '{tag}.md'
       }
@@ -343,7 +345,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ vaultPath }) => {
               <div className="space-y-4">
                 <div>
                   <label className="block" style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', marginTop: '20px', marginBottom: '14px' }}>
-                    Content Path <span style={{ color: 'var(--status-error)' }}>*</span>
+                    Backend Content Path <span style={{ color: 'var(--status-error)' }}>*</span>
                   </label>
                   <input
                     type="text"
@@ -356,6 +358,29 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ vaultPath }) => {
                     style={{ padding: '10px 14px', fontSize: '14.5px', border: '1px solid var(--input-border)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', borderRadius: '8px', boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.06)', marginBottom: '0' }}
                     placeholder="src/content/posts/"
                   />
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    Path in your GitHub repo where posts are stored
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block" style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', marginTop: '20px', marginBottom: '14px' }}>
+                    Live Post Path
+                  </label>
+                  <input
+                    type="text"
+                    value={editingBlog.content.livePostPath || ''}
+                    onChange={e => setEditingBlog({
+                      ...editingBlog,
+                      content: { ...editingBlog.content, livePostPath: e.target.value }
+                    })}
+                    className="w-full"
+                    style={{ padding: '10px 14px', fontSize: '14.5px', border: '1px solid var(--input-border)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', borderRadius: '8px', boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.06)', marginBottom: '0' }}
+                    placeholder="/posts/"
+                  />
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    URL path for posts on your live site (e.g., /posts/ or /blog/)
+                  </p>
                 </div>
 
                 <div>

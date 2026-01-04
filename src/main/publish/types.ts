@@ -17,7 +17,8 @@ export interface BlogTarget {
     token: string; // Cloudflare API token
   };
   content: {
-    path: string; // e.g., "src/content/posts/"
+    path: string; // e.g., "src/content/posts/" - path in GitHub repo
+    livePostPath?: string; // e.g., "/posts/" - URL path on live site
     format: 'single-file' | 'multi-file'; // Single file per tag or split by date
     filename?: string; // Template for filename (e.g., "{tag}.md")
   };

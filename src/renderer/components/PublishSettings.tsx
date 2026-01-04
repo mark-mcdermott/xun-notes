@@ -16,6 +16,7 @@ interface BlogTarget {
   };
   content: {
     path: string;
+    livePostPath?: string;
     format: 'single-file' | 'multi-file';
     filename?: string;
   };
@@ -66,6 +67,7 @@ export const PublishSettings: React.FC<PublishSettingsProps> = ({ onClose, vault
       },
       content: {
         path: 'src/content/posts/',
+        livePostPath: '/posts/',
         format: 'single-file',
         filename: '{tag}.md'
       }
@@ -348,7 +350,7 @@ export const PublishSettings: React.FC<PublishSettingsProps> = ({ onClose, vault
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-obsidian-text-secondary mb-1">
-                    Content Path <span className="text-red-400">*</span>
+                    Backend Content Path <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -360,6 +362,28 @@ export const PublishSettings: React.FC<PublishSettingsProps> = ({ onClose, vault
                     className="w-full px-4 py-3 border border-obsidian-border rounded-lg bg-white text-obsidian-text placeholder-obsidian-text-muted focus:border-accent focus:ring-1 focus:ring-accent outline-none shadow-sm"
                     placeholder="src/content/posts/"
                   />
+                  <p className="text-xs text-obsidian-text-muted mt-1">
+                    Path in your GitHub repo where posts are stored
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-obsidian-text-secondary mb-1">
+                    Live Post Path
+                  </label>
+                  <input
+                    type="text"
+                    value={editingBlog.content.livePostPath || ''}
+                    onChange={e => setEditingBlog({
+                      ...editingBlog,
+                      content: { ...editingBlog.content, livePostPath: e.target.value }
+                    })}
+                    className="w-full px-4 py-3 border border-obsidian-border rounded-lg bg-white text-obsidian-text placeholder-obsidian-text-muted focus:border-accent focus:ring-1 focus:ring-accent outline-none shadow-sm"
+                    placeholder="/posts/"
+                  />
+                  <p className="text-xs text-obsidian-text-muted mt-1">
+                    URL path for posts on your live site (e.g., /posts/ or /blog/)
+                  </p>
                 </div>
 
                 <div>

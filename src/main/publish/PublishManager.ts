@@ -219,7 +219,9 @@ export class PublishManager {
           baseUrl = `https://${blogTarget.name}`;
         }
         if (baseUrl) {
-          job.postUrl = `${baseUrl}/posts/${slug}`;
+          // Use livePostPath from settings, default to /posts/
+          const livePostPath = blogTarget.content.livePostPath?.replace(/^\/|\/$/g, '') || 'posts';
+          job.postUrl = `${baseUrl}/${livePostPath}/${slug}`;
         }
       }
 
