@@ -212,9 +212,13 @@ export class PublishManager {
       const job = this.jobs.get(jobId);
       if (job) {
         (job as any).slug = slug;
-        // Construct post URL if siteUrl is configured
-        if (blogTarget.siteUrl) {
-          const baseUrl = blogTarget.siteUrl.replace(/\/$/, ''); // Remove trailing slash
+        // Construct post URL - use siteUrl if configured, otherwise derive from blog name
+        let baseUrl = blogTarget.siteUrl?.replace(/\/$/, '');
+        if (!baseUrl && blogTarget.name.includes('.')) {
+          // Blog name looks like a domain (e.g., "markmcdermott.io")
+          baseUrl = `https://${blogTarget.name}`;
+        }
+        if (baseUrl) {
           job.postUrl = `${baseUrl}/posts/${slug}`;
         }
       }

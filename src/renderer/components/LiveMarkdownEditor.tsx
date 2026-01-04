@@ -676,6 +676,20 @@ function createDecorations(
     const lineText = line.text;
     const cursorOnThisLine = cursorPos >= line.from && cursorPos <= line.to;
 
+    // GLOBAL: Always hide @published lines (no cursor exception - it's metadata)
+    if (lineText.match(/^@published\s/i)) {
+      // Replace entire line content with nothing, and collapse the line
+      if (line.from < line.to) {
+        decorations.push(
+          Decoration.replace({}).range(line.from, line.to)
+        );
+      }
+      decorations.push(
+        Decoration.line({ class: 'cm-hidden-line' }).range(line.from)
+      );
+      continue;
+    }
+
     // Track blog block state
     if (lineText.trim() === '===') {
       if (!inBlogBlock) {
@@ -1111,6 +1125,21 @@ const editorTheme = EditorView.theme({
     fontSize: '0.01px',
     letterSpacing: '-1em',
     userSelect: 'none'
+  },
+
+  // Hidden line - completely hide the line by collapsing it
+  '.cm-hidden-line': {
+    fontSize: '0 !important',
+    height: '0 !important',
+    minHeight: '0 !important',
+    maxHeight: '0 !important',
+    lineHeight: '0 !important',
+    padding: '0 !important',
+    margin: '0 !important',
+    overflow: 'hidden !important',
+    visibility: 'hidden !important',
+    display: 'block !important',
+    border: 'none !important'
   },
 
   // Inline formatting styles

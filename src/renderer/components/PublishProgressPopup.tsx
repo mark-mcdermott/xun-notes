@@ -190,11 +190,12 @@ export const PublishProgressPopup: React.FC<PublishProgressPopupProps> = ({
                 background: 'none',
                 border: 'none',
                 padding: 0,
+                marginLeft: '6px',
                 cursor: 'pointer',
                 textDecoration: 'underline'
               }}
             >
-              View post
+              post
             </button>
           )}
         </div>
