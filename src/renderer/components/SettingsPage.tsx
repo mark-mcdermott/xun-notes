@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Plus, Trash2, Edit2, Github, Cloud } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, Edit2, Github, Cloud, Power } from 'lucide-react';
 import { Button } from './Button';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -34,9 +34,10 @@ interface BlogTarget {
 
 interface SettingsPageProps {
   vaultPath?: string | null;
+  onVaultSwitch?: () => Promise<void>;
 }
 
-export const SettingsPage: React.FC<SettingsPageProps> = () => {
+export const SettingsPage: React.FC<SettingsPageProps> = ({ onVaultSwitch }) => {
   const [blogs, setBlogs] = useState<BlogTarget[]>([]);
   const [editingBlog, setEditingBlog] = useState<BlogTarget | null>(null);
   const [loading, setLoading] = useState(true);
@@ -236,6 +237,22 @@ export const SettingsPage: React.FC<SettingsPageProps> = () => {
       }
     } catch (error) {
       console.error('Failed to delete vault:', error);
+    }
+  };
+
+  const handleActivateVault = async (vault: VaultEntry) => {
+    try {
+      const result = await window.electronAPI.vault.switch(vault.id);
+      if (result.success) {
+        // Update local state
+        setActiveVaultId(vault.id);
+        // Notify parent to refresh app state
+        if (onVaultSwitch) {
+          await onVaultSwitch();
+        }
+      }
+    } catch (error) {
+      console.error('Failed to activate vault:', error);
     }
   };
 
@@ -531,7 +548,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {vaults.map(vault => (
+              {[...vaults].sort((a, b) => a.name.localeCompare(b.name)).map(vault => (
                 <div
                   key={vault.id}
                   className="flex items-center justify-between transition-shadow hover:shadow-md"
@@ -554,7 +571,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = () => {
                           fontSize: '11px',
                           color: 'var(--bg-secondary)',
                           backgroundColor: 'var(--text-muted)',
-                          padding: '2px 6px',
+                          padding: '2px 6px 3px 6px',
                           borderRadius: '4px',
                           fontWeight: 500,
                           marginLeft: '8px'
@@ -568,9 +585,19 @@ export const SettingsPage: React.FC<SettingsPageProps> = () => {
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
+                    {vault.id !== activeVaultId && (
+                      <button
+                        onClick={() => handleActivateVault(vault)}
+                        className="p-2 rounded-lg transition-all hover:bg-gray-100 hover:opacity-60"
+                        style={{ color: 'var(--text-icon)', backgroundColor: 'transparent' }}
+                        title="Activate"
+                      >
+                        <Power size={16} strokeWidth={1.5} />
+                      </button>
+                    )}
                     <button
                       onClick={() => handleEditVault(vault)}
-                      className="p-2 rounded-lg transition-colors hover:bg-gray-100"
+                      className="p-2 rounded-lg transition-all hover:bg-gray-100 hover:opacity-60"
                       style={{ color: 'var(--text-icon)', backgroundColor: 'transparent' }}
                       title="Edit"
                     >
@@ -578,7 +605,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = () => {
                     </button>
                     <button
                       onClick={() => handleDeleteVaultClick(vault)}
-                      className="p-2 rounded-lg transition-colors hover:bg-red-50"
+                      className="p-2 rounded-lg transition-all hover:bg-red-50 hover:opacity-60"
                       style={{ color: 'var(--status-error)', backgroundColor: 'transparent' }}
                       title="Delete"
                     >
@@ -621,7 +648,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {blogs.map(blog => (
+              {[...blogs].sort((a, b) => a.name.localeCompare(b.name)).map(blog => (
                 <div
                   key={blog.id}
                   className="flex items-center justify-between transition-shadow hover:shadow-md"
@@ -643,7 +670,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = () => {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleEditBlog(blog)}
-                      className="p-2 rounded-lg transition-colors hover:bg-gray-100"
+                      className="p-2 rounded-lg transition-all hover:bg-gray-100 hover:opacity-60"
                       style={{ color: 'var(--text-icon)', backgroundColor: 'transparent' }}
                       title="Edit"
                     >
@@ -651,7 +678,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = () => {
                     </button>
                     <button
                       onClick={() => handleDeleteBlog(blog.id)}
-                      className="p-2 rounded-lg transition-colors hover:bg-red-50"
+                      className="p-2 rounded-lg transition-all hover:bg-red-50 hover:opacity-60"
                       style={{ color: 'var(--status-error)', backgroundColor: 'transparent' }}
                       title="Delete"
                     >

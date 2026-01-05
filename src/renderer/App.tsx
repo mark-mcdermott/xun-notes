@@ -68,6 +68,12 @@ const App: React.FC = () => {
   const resizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const [blogs, setBlogs] = useState<Array<{ id: string; name: string }>>([]);
 
+  // Vault switcher state
+  const [vaultMenuOpen, setVaultMenuOpen] = useState(false);
+  const [allVaults, setAllVaults] = useState<Array<{ id: string; name: string; path: string }>>([]);
+  const [activeVaultId, setActiveVaultId] = useState<string | null>(null);
+  const vaultMenuRef = useRef<HTMLDivElement>(null);
+
   // Blog block publish progress state
   const [blogBlockPublishJobId, setBlogBlockPublishJobId] = useState<string | null>(null);
   const [blogBlockPublishStatus, setBlogBlockPublishStatus] = useState<'pending' | 'preparing' | 'pushing' | 'building' | 'deploying' | 'completed' | 'failed'>('pending');
@@ -194,6 +200,43 @@ const App: React.FC = () => {
     checkFirstRun();
   }, []);
 
+  // Handle vault switch from Settings page (smooth SPA transition)
+  const handleVaultSwitchFromSettings = useCallback(async () => {
+    try {
+      // Refresh file tree and tags
+      await refreshFileTree();
+      await refreshTags();
+
+      // Refresh vaults list
+      const vaultsResult = await window.electronAPI.vault.getAll();
+      if (vaultsResult.success) {
+        setAllVaults(vaultsResult.vaults || []);
+        setActiveVaultId(vaultsResult.activeVaultId || null);
+      }
+
+      // Refresh blogs
+      const blogsResult = await window.electronAPI.publish.getBlogs();
+      if (blogsResult.success && blogsResult.blogs) {
+        setBlogs(blogsResult.blogs);
+      }
+
+      // Refresh daily note dates
+      const dates = await getDailyNoteDates();
+      setDailyNoteDates(dates);
+
+      // Close all tabs and open today's note for the new vault
+      const { path, content } = await getTodayNote();
+      setOpenTabs([{ type: 'file', path, content }]);
+      setActiveTabIndex(0);
+
+      // Reset navigation history
+      setNavHistory([]);
+      setNavHistoryIndex(-1);
+    } catch (err) {
+      console.error('Failed to refresh after vault switch:', err);
+    }
+  }, [refreshFileTree, refreshTags, getDailyNoteDates, getTodayNote]);
+
   // Handle vault selection
   const handleVaultSelect = async (path: string) => {
     try {
@@ -265,6 +308,52 @@ const App: React.FC = () => {
     };
     loadBlogs();
   }, []);
+
+  // Load vaults for vault switcher
+  useEffect(() => {
+    const loadVaults = async () => {
+      try {
+        const result = await window.electronAPI.vault.getAll();
+        if (result.success) {
+          setAllVaults(result.vaults || []);
+          setActiveVaultId(result.activeVaultId || null);
+        }
+      } catch (err) {
+        console.error('Failed to load vaults:', err);
+      }
+    };
+    loadVaults();
+  }, []);
+
+  // Close vault menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (vaultMenuRef.current && !vaultMenuRef.current.contains(event.target as Node)) {
+        setVaultMenuOpen(false);
+      }
+    };
+    if (vaultMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [vaultMenuOpen]);
+
+  // Handle vault switch
+  const handleVaultSwitch = async (vaultId: string) => {
+    try {
+      const result = await window.electronAPI.vault.switch(vaultId);
+      if (result.success) {
+        setActiveVaultId(vaultId);
+        setVaultMenuOpen(false);
+        // Reload the page to refresh all state with the new vault
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error('Failed to switch vault:', err);
+    }
+  };
 
   // Initialize theme and listen for changes
   useEffect(() => {
@@ -1079,7 +1168,7 @@ const App: React.FC = () => {
 
           {/* Collapse sidebar button */}
           <div className="flex items-center justify-end h-full flex-1">
-            <button className="h-full px-3 hover:bg-[var(--sidebar-hover)] transition-colors cursor-pointer" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginLeft: sidebarCollapsed ? '10px' : '0', WebkitAppRegion: 'no-drag' } as React.CSSProperties} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
+            <button className="h-full px-3 hover:bg-[var(--sidebar-hover)] hover:opacity-60 transition-all cursor-pointer" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginLeft: sidebarCollapsed ? '10px' : '0', WebkitAppRegion: 'no-drag' } as React.CSSProperties} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
               {sidebarCollapsed ? <PanelLeftOpen size={22} strokeWidth={1.5} style={{ marginTop: '1px' }} /> : <PanelLeftClose size={20} strokeWidth={1.5} />}
             </button>
           </div>
@@ -1113,9 +1202,9 @@ const App: React.FC = () => {
                       marginBottom: isActive ? '-1px' : '0'
                     }}
                   >
-                    <span className="truncate" style={{ fontSize: '13.5px', color: isActive ? 'var(--tab-active-text)' : 'var(--tab-inactive-text)' }}>{tabLabel}</span>
+                    <span className="truncate hover:opacity-60 transition-all" style={{ fontSize: '13.5px', color: isActive ? 'var(--tab-active-text)' : 'var(--tab-inactive-text)' }}>{tabLabel}</span>
                     <button
-                      className="p-0.5 rounded transition-colors flex items-center justify-center hover:bg-[var(--tab-close-hover)]"
+                      className="p-0.5 rounded transition-all flex items-center justify-center hover:bg-[var(--tab-close-hover)] hover:opacity-60"
                       style={{ color: isActive ? 'var(--tab-active-text)' : 'var(--tab-inactive-text)', backgroundColor: 'transparent' }}
                       title="Close tab"
                       onClick={(e) => handleCloseTab(index, e)}
@@ -1143,12 +1232,12 @@ const App: React.FC = () => {
                     marginBottom: '-1px'
                   }}
                 >
-                  <span className="flex items-center gap-2" style={{ fontSize: '13.5px', color: 'var(--tab-active-text)' }}>
+                  <span className="flex items-center gap-2 hover:opacity-60 transition-all" style={{ fontSize: '13.5px', color: 'var(--tab-active-text)' }}>
                     <Settings size={14} strokeWidth={1.5} style={{ marginRight: '5px' }} />
                     Settings
                   </span>
                   <button
-                    className="p-0.5 rounded transition-colors flex items-center justify-center hover:bg-[var(--tab-close-hover)]"
+                    className="p-0.5 rounded transition-all flex items-center justify-center hover:bg-[var(--tab-close-hover)] hover:opacity-60"
                     style={{ color: 'var(--tab-active-text)', backgroundColor: 'transparent' }}
                     title="Close settings"
                     onClick={(e) => {
@@ -1162,7 +1251,7 @@ const App: React.FC = () => {
               )}
               {/* New tab button */}
               <button
-                className="h-full transition-colors flex items-center justify-center hover:bg-[var(--sidebar-hover)]"
+                className="h-full transition-all flex items-center justify-center hover:bg-[var(--sidebar-hover)] hover:opacity-60"
                 style={{ color: 'var(--tab-inactive-text)', backgroundColor: 'transparent', paddingLeft: '12px', paddingRight: '8px' }}
                 title="New note"
                 onClick={handleQuickCreateFile}
@@ -1187,14 +1276,14 @@ const App: React.FC = () => {
           {/* <button className="p-2 hover:bg-[var(--sidebar-hover)] rounded transition-colors" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginBottom: '8px' }} title="Daily Notes" onClick={() => setSidebarTab('daily')}>
             <Calendar size={20} strokeWidth={1.5} />
           </button> */}
-          <button className="p-2 hover:bg-[var(--sidebar-hover)] rounded transition-colors" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="Today's Note" onClick={handleOpenTodayNote}>
+          <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="Today's Note" onClick={handleOpenTodayNote}>
             <FileText size={20} strokeWidth={1.5} />
           </button>
           <hr style={{ width: '24px', border: 'none', borderTop: '1px solid var(--border-primary)' }} />
-          <button className="p-2 hover:bg-[var(--sidebar-hover)] rounded transition-colors" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginBottom: '8px' }} title="File Tree" onClick={() => setSidebarTab('files')}>
+          <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginBottom: '8px' }} title="File Tree" onClick={() => setSidebarTab('files')}>
             <FolderTree size={20} strokeWidth={1.5} />
           </button>
-          <button className="p-2 hover:bg-[var(--sidebar-hover)] rounded transition-colors" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="Tags" onClick={() => setSidebarTab('tags')}>
+          <button className="p-2 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="Tags" onClick={() => setSidebarTab('tags')}>
             <Code size={20} strokeWidth={1.5} />
           </button>
         </div>
@@ -1211,10 +1300,10 @@ const App: React.FC = () => {
           {/* Sidebar toolbar */}
           <div className="h-9 flex items-center" style={{ backgroundColor: 'transparent', marginBottom: '16px', paddingLeft: '20px' }}>
             <div className="flex items-center gap-0.5">
-              <button className="p-1.5 hover:bg-[var(--sidebar-hover)] rounded transition-colors" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="New note" onClick={handleCreateFile}>
+              <button className="p-1.5 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="New note" onClick={handleCreateFile}>
                 <FilePlus size={20} strokeWidth={1.5} />
               </button>
-              <button className="p-1.5 hover:bg-[var(--sidebar-hover)] rounded transition-colors" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="New folder" onClick={handleCreateFolder}>
+              <button className="p-1.5 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="New folder" onClick={handleCreateFolder}>
                 <FolderPlus size={20} strokeWidth={1.5} />
               </button>
             </div>
@@ -1267,18 +1356,93 @@ const App: React.FC = () => {
 
           {/* Bottom vault selector and settings - all on one row */}
           <div className="px-2 flex items-center justify-between" style={{ borderTop: '1px solid var(--border-primary)', paddingTop: '10px', paddingBottom: '10px' }}>
-            <button className="flex items-center px-2 py-1.5 hover:bg-[var(--sidebar-hover)] rounded text-xs" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }}>
-              <div className="flex flex-col items-center" style={{ marginRight: '6px', marginLeft: '8px' }}>
-                <ChevronUp size={12} strokeWidth={2} className="mb-[-4px]" />
-                <ChevronDown size={12} strokeWidth={2} />
-              </div>
-              <span className="truncate text-left" style={{ fontWeight: 600 }}>{getVaultName()}</span>
-            </button>
+            <div ref={vaultMenuRef} className="relative">
+              <button
+                className="flex items-center px-2 py-1.5 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded text-xs transition-all"
+                style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', outline: 'none' }}
+                onClick={() => setVaultMenuOpen(!vaultMenuOpen)}
+              >
+                <div className="flex flex-col items-center" style={{ marginRight: '6px', marginLeft: '8px' }}>
+                  <ChevronUp size={12} strokeWidth={2} className="mb-[-4px]" />
+                  <ChevronDown size={12} strokeWidth={2} />
+                </div>
+                <span className="truncate text-left" style={{ fontWeight: 600 }}>{getVaultName()}</span>
+              </button>
+              {/* Vault switcher dropdown */}
+              {vaultMenuOpen && allVaults.length > 0 && (
+                <div
+                  className="absolute left-0 z-50"
+                  style={{
+                    bottom: '100%',
+                    marginBottom: '4px',
+                    backgroundColor: 'var(--dialog-bg)',
+                    border: '1px solid var(--border-light)',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                    padding: '4px',
+                    minWidth: '200px'
+                  }}
+                >
+                  {[...allVaults].sort((a, b) => a.name.localeCompare(b.name)).map((vault) => (
+                    <button
+                      key={vault.id}
+                      className="w-full text-left flex items-center justify-between cursor-pointer transition-colors"
+                      style={{
+                        backgroundColor: vault.id === activeVaultId ? 'var(--sidebar-hover)' : 'transparent',
+                        padding: '8px 12px',
+                        margin: '2px 0',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        lineHeight: '1.4',
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = vault.id === activeVaultId ? 'var(--sidebar-hover)' : 'transparent'}
+                      onClick={() => handleVaultSwitch(vault.id)}
+                    >
+                      <span className="flex items-center" style={{ flex: 1 }}>
+                        <span
+                          className="truncate"
+                          style={{
+                            color: 'var(--accent-primary)',
+                            fontWeight: 500
+                          }}
+                        >
+                          {vault.name}
+                        </span>
+                        {vault.id === activeVaultId && (
+                          <span style={{
+                            fontSize: '11px',
+                            color: 'var(--bg-secondary)',
+                            backgroundColor: 'var(--text-muted)',
+                            padding: '2px 6px 3px 6px',
+                            borderRadius: '4px',
+                            fontWeight: 500,
+                            marginLeft: '8px'
+                          }}>
+                            Active
+                          </span>
+                        )}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '12px',
+                          color: 'var(--text-muted)',
+                          marginLeft: '8px'
+                        }}
+                      >
+                        vault
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <div className="flex items-center gap-1">
               {/* <button className="p-1.5 hover:bg-[var(--sidebar-hover)] rounded transition-colors" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent' }} title="Help">
                 <HelpCircle size={16} strokeWidth={1.5} />
               </button> */}
-              <button className="p-1.5 hover:bg-[var(--sidebar-hover)] rounded transition-colors" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginRight: '8px', outline: 'none' }} title="Settings" onClick={() => setShowSettings(true)}>
+              <button className="p-1.5 hover:bg-[var(--sidebar-hover)] hover:opacity-60 rounded transition-all" style={{ color: 'var(--sidebar-icon)', backgroundColor: 'transparent', marginRight: '8px', outline: 'none' }} title="Settings" onClick={() => setShowSettings(true)}>
                 <Settings size={18} strokeWidth={1.5} />
               </button>
             </div>
@@ -1290,7 +1454,7 @@ const App: React.FC = () => {
         <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-primary)' }}>
 
         {showSettings ? (
-          <SettingsPage vaultPath={vaultPath} />
+          <SettingsPage vaultPath={vaultPath} onVaultSwitch={handleVaultSwitchFromSettings} />
         ) : activeFileTab ? (
           <>
             {/* Navigation bar with breadcrumb */}
@@ -1322,10 +1486,10 @@ const App: React.FC = () => {
                 <Breadcrumb path={selectedFile!} />
               </div>
 
-              {/* Right side - view mode icon */}
+              {/* Right side - view mode icon (hidden - editor mode is now the only option)
               <div className="flex items-center gap-1 ml-auto">
                 <button
-                  className="p-1 rounded transition-colors"
+                  className="p-1 rounded transition-all hover:opacity-60"
                   style={{ color: 'var(--text-icon)', backgroundColor: 'transparent', marginTop: '6px' }}
                   title={`View mode: ${editorViewMode}`}
                   onClick={() => {
@@ -1339,10 +1503,11 @@ const App: React.FC = () => {
                   {editorViewMode === 'split' && <Columns size={18} strokeWidth={1.5} />}
                   {editorViewMode === 'preview' && <Eye size={18} strokeWidth={1.5} />}
                 </button>
-                {/* <button className="p-1 rounded transition-colors" style={{ color: 'var(--text-icon)', backgroundColor: 'transparent' }} title="More options">
+                <button className="p-1 rounded transition-colors" style={{ color: 'var(--text-icon)', backgroundColor: 'transparent' }} title="More options">
                   <MoreHorizontal size={18} strokeWidth={1.5} />
-                </button> */}
+                </button>
               </div>
+              */}
             </div>
 
             {/* Markdown Editor */}

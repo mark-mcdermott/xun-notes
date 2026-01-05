@@ -187,7 +187,7 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
           />
         ) : (
           <div
-            className={`inline-flex items-center cursor-pointer group rounded-sm hover:bg-[var(--sidebar-hover)]`}
+            className={`inline-flex items-center cursor-pointer group rounded-sm hover:bg-[var(--sidebar-hover)] hover:opacity-60 transition-all`}
             data-tree-item="true"
             style={{
               fontSize: '13.75px',
