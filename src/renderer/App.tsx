@@ -1605,6 +1605,7 @@ const App: React.FC = () => {
             onDeleteTag={handleDeleteTag}
             onPublish={handlePublish}
             onUpdateContent={handleUpdateTagContent}
+            onTagClick={handleEditorTagClick}
             canGoBack={canGoBack}
             canGoForward={canGoForward}
             goBack={goBack}

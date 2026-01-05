@@ -1,9 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
-import rehypeSanitize from 'rehype-sanitize';
+import React, { useEffect, useState, useRef } from 'react';
 import { Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { LiveMarkdownEditor } from './LiveMarkdownEditor';
 
 interface TaggedContent {
   date: string;
@@ -17,17 +14,20 @@ interface TagViewProps {
   onDeleteTag?: (tag: string) => Promise<void>;
   onPublish?: (tag: string) => void;
   onUpdateContent?: (filePath: string, oldContent: string, newContent: string) => Promise<void>;
+  onTagClick?: (tag: string, newTab: boolean) => void;
   canGoBack?: boolean;
   canGoForward?: boolean;
   goBack?: () => void;
   goForward?: () => void;
 }
 
-export const TagView: React.FC<TagViewProps> = ({ tag, getContent, onDeleteTag, canGoBack, canGoForward, goBack, goForward }) => {
+export const TagView: React.FC<TagViewProps> = ({ tag, getContent, onDeleteTag, onUpdateContent, onTagClick, canGoBack, canGoForward, goBack, goForward }) => {
   const [content, setContent] = useState<TaggedContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // Track original content for each item to enable updates
+  const originalContentRef = useRef<Map<number, string>>(new Map());
 
   // Handle escape key to close modal
   useEffect(() => {
@@ -47,6 +47,11 @@ export const TagView: React.FC<TagViewProps> = ({ tag, getContent, onDeleteTag, 
       try {
         const result = await getContent(tag);
         setContent(result);
+        // Store original content for each item
+        originalContentRef.current = new Map();
+        result.forEach((item, index) => {
+          originalContentRef.current.set(index, item.content);
+        });
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -56,6 +61,20 @@ export const TagView: React.FC<TagViewProps> = ({ tag, getContent, onDeleteTag, 
 
     loadContent();
   }, [tag, getContent]);
+
+  // Create save handler for each content section
+  const createSaveHandler = (index: number, filePath: string) => {
+    return async (newContent: string) => {
+      const originalContent = originalContentRef.current.get(index);
+      if (originalContent && newContent !== originalContent && onUpdateContent) {
+        await onUpdateContent(filePath, originalContent, newContent);
+        // Update original content ref after successful save
+        originalContentRef.current.set(index, newContent);
+        // Update local state
+        setContent(prev => prev.map((c, i) => i === index ? { ...c, content: newContent } : c));
+      }
+    };
+  };
 
   if (loading) {
     return (
@@ -214,34 +233,37 @@ export const TagView: React.FC<TagViewProps> = ({ tag, getContent, onDeleteTag, 
         </div>
       )}
 
-      {/* Scrollable content area - matches editor padding */}
+      {/* Scrollable content area */}
       <div className="flex-1 overflow-auto">
-        <div className="space-y-6" style={{ padding: '16px 24px 24px 48px' }}>
+        <div style={{ padding: '16px 24px 24px 0' }}>
           {content.map((item, index) => (
             <div
-              key={`${item.date}-${index}`}
-              className="py-1"
+              key={`${item.filePath}-${index}`}
             >
-              {/* File path header */}
-              <h2 className="font-semibold mb-3" style={{ fontSize: '1.5em', lineHeight: '1.3', color: 'var(--text-muted)', marginTop: index === 0 ? '25px' : '32px' }}>
+              {/* File path header - uneditable, light gray */}
+              <h2
+                className="font-semibold"
+                style={{
+                  fontSize: '1.5em',
+                  lineHeight: '1.3',
+                  color: 'var(--text-muted)',
+                  marginTop: index === 0 ? '25px' : '48px',
+                  marginBottom: '8px',
+                  paddingLeft: '48px'
+                }}
+              >
                 {item.filePath.replace('.md', '')}
               </h2>
 
-              {/* Content */}
-              <div className="prose prose-sm max-w-none">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeRaw, rehypeSanitize]}
-                  components={{
-                    a: ({ href, children }) => (
-                      <a href={href} style={{ color: 'var(--editor-link)', textDecoration: 'underline' }}>
-                        {children}
-                      </a>
-                    )
-                  }}
-                >
-                  {item.content}
-                </ReactMarkdown>
+              {/* Live Markdown Editor - same as note page */}
+              <div style={{ marginLeft: '0', marginRight: '0' }}>
+                <LiveMarkdownEditor
+                  key={`${item.filePath}-${index}-${item.content.substring(0, 20)}`}
+                  initialContent={item.content}
+                  filePath={item.filePath}
+                  onSave={createSaveHandler(index, item.filePath)}
+                  onTagClick={onTagClick}
+                />
               </div>
             </div>
           ))}
