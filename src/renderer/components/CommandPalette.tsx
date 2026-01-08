@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Search, FileText, Hash, Calendar, Plus, FolderPlus } from 'lucide-react';
 import type { FileNode } from '../../preload';
 
 interface Command {
@@ -7,7 +8,6 @@ interface Command {
   description?: string;
   category: 'file' | 'tag' | 'action' | 'daily';
   action: () => void;
-  icon?: string;
 }
 
 interface CommandPaletteProps {
@@ -36,6 +36,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   // Build list of all files
   const getAllFiles = (node: FileNode | null, files: Array<{ path: string; name: string }> = []): Array<{ path: string; name: string }> => {
@@ -59,9 +60,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     // Add action commands
     commands.push({
       id: 'new-file',
-      title: 'Create New File',
+      title: 'New File',
+      description: 'Create a new markdown file',
       category: 'action',
-      icon: '📄',
       action: () => {
         onClose();
         onCreateFile();
@@ -70,9 +71,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
     commands.push({
       id: 'new-folder',
-      title: 'Create New Folder',
+      title: 'New Folder',
+      description: 'Create a new folder',
       category: 'action',
-      icon: '📁',
       action: () => {
         onClose();
         onCreateFolder();
@@ -86,10 +87,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
     commands.push({
       id: 'today',
-      title: 'Go to Today',
+      title: 'Today',
       description: today,
       category: 'daily',
-      icon: '📅',
       action: () => {
         onClose();
         onDateSelect(today);
@@ -98,10 +98,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
     commands.push({
       id: 'yesterday',
-      title: 'Go to Yesterday',
+      title: 'Yesterday',
       description: yesterday,
       category: 'daily',
-      icon: '📅',
       action: () => {
         onClose();
         onDateSelect(yesterday);
@@ -110,10 +109,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
     commands.push({
       id: 'tomorrow',
-      title: 'Go to Tomorrow',
+      title: 'Tomorrow',
       description: tomorrow,
       category: 'daily',
-      icon: '📅',
       action: () => {
         onClose();
         onDateSelect(tomorrow);
@@ -128,7 +126,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         title: file.name.replace('.md', ''),
         description: file.path,
         category: 'file',
-        icon: '📄',
         action: () => {
           onClose();
           onFileSelect(file.path);
@@ -143,7 +140,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         title: tag,
         description: 'View tag',
         category: 'tag',
-        icon: '#️⃣',
         action: () => {
           onClose();
           onTagSelect(tag);
@@ -179,6 +175,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     }
   }, [isOpen]);
 
+  // Scroll selected item into view
+  useEffect(() => {
+    if (listRef.current) {
+      const selectedItem = listRef.current.children[selectedIndex] as HTMLElement;
+      if (selectedItem) {
+        selectedItem.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [selectedIndex]);
+
   // Handle keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -205,97 +211,134 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
   if (!isOpen) return null;
 
+  const getCategoryIcon = (category: string, isSelected: boolean) => {
+    const color = isSelected ? 'var(--accent)' : 'var(--text-muted)';
+    const size = 16;
+
+    switch (category) {
+      case 'file':
+        return <FileText size={size} style={{ color }} strokeWidth={1.5} />;
+      case 'tag':
+        return <Hash size={size} style={{ color }} strokeWidth={2} />;
+      case 'daily':
+        return <Calendar size={size} style={{ color }} strokeWidth={1.5} />;
+      case 'action':
+        return <Plus size={size} style={{ color }} strokeWidth={2} />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div
-      className="fixed inset-0 bg-black/70 flex items-start justify-center pt-20 z-50 backdrop-blur-sm"
+      className="fixed inset-0 flex items-start justify-center pt-24 z-50"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
       onClick={onClose}
     >
       <div
-        className="bg-obsidian-bg-secondary rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden border border-obsidian-border"
+        className="rounded-lg shadow-2xl w-full max-w-lg overflow-hidden"
+        style={{
+          backgroundColor: 'var(--bg-primary)',
+          border: '1px solid var(--border-color)'
+        }}
         onClick={e => e.stopPropagation()}
       >
         {/* Search input */}
-        <div className="p-4 border-b border-obsidian-border">
+        <div
+          className="px-4 py-3"
+          style={{ borderBottom: '1px solid var(--border-color)' }}
+        >
           <div className="flex items-center gap-3">
-            <svg className="w-5 h-5 text-obsidian-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+            <Search size={18} style={{ color: 'var(--text-muted)' }} strokeWidth={1.5} />
             <input
               ref={inputRef}
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search files, tags, or commands..."
-              className="w-full bg-transparent text-lg text-obsidian-text placeholder-obsidian-text-muted border-none outline-none"
+              className="w-full bg-transparent text-sm border-none outline-none"
+              style={{ color: 'var(--text-primary)' }}
             />
           </div>
         </div>
 
         {/* Results */}
-        <div className="max-h-96 overflow-y-auto">
+        <div
+          ref={listRef}
+          className="max-h-80 overflow-y-auto py-2"
+        >
           {filteredCommands.length === 0 ? (
-            <div className="p-8 text-center text-obsidian-text-muted">
-              No results found for "{searchQuery}"
+            <div
+              className="px-4 py-8 text-center text-sm"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              No results found
             </div>
           ) : (
-            <div>
-              {filteredCommands.map((cmd, index) => (
-                <button
-                  key={cmd.id}
-                  onClick={cmd.action}
-                  className={`w-full px-4 py-2.5 flex items-center gap-3 transition-colors ${
-                    index === selectedIndex
-                      ? 'bg-accent/20 text-accent'
-                      : 'hover:bg-obsidian-hover text-obsidian-text'
-                  }`}
+            filteredCommands.map((cmd, index) => (
+              <button
+                key={cmd.id}
+                onClick={cmd.action}
+                className="w-full px-4 py-2 flex items-center gap-3 text-left transition-colors"
+                style={{
+                  backgroundColor: index === selectedIndex ? 'var(--bg-tertiary)' : 'transparent',
+                  color: index === selectedIndex ? 'var(--accent)' : 'var(--text-primary)'
+                }}
+              >
+                <div className="w-6 flex items-center justify-center">
+                  {getCategoryIcon(cmd.category, index === selectedIndex)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{cmd.title}</div>
+                  {cmd.description && (
+                    <div
+                      className="text-xs truncate"
+                      style={{ color: 'var(--text-muted)' }}
+                    >
+                      {cmd.description}
+                    </div>
+                  )}
+                </div>
+                <div
+                  className="text-[10px] uppercase px-1.5 py-0.5 rounded"
+                  style={{
+                    backgroundColor: 'var(--bg-tertiary)',
+                    color: 'var(--text-muted)'
+                  }}
                 >
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                    index === selectedIndex ? 'bg-accent/20' : 'bg-obsidian-surface'
-                  }`}>
-                    {cmd.category === 'file' && (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    )}
-                    {cmd.category === 'tag' && (
-                      <span className="text-accent font-bold">#</span>
-                    )}
-                    {cmd.category === 'daily' && (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    )}
-                    {cmd.category === 'action' && (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
-                      </svg>
-                    )}
-                  </div>
-                  <div className="flex-1 text-left">
-                    <div className="font-medium">{cmd.title}</div>
-                    {cmd.description && (
-                      <div className="text-xs text-obsidian-text-muted truncate">{cmd.description}</div>
-                    )}
-                  </div>
-                  <div className="text-[10px] text-obsidian-text-muted uppercase px-2 py-0.5 bg-obsidian-surface rounded">
-                    {cmd.category}
-                  </div>
-                </button>
-              ))}
-            </div>
+                  {cmd.category}
+                </div>
+              </button>
+            ))
           )}
         </div>
 
         {/* Footer hint */}
-        <div className="px-4 py-2 bg-obsidian-bg-tertiary border-t border-obsidian-border flex items-center gap-4 text-xs text-obsidian-text-muted">
+        <div
+          className="px-4 py-2 flex items-center gap-4 text-xs"
+          style={{
+            borderTop: '1px solid var(--border-color)',
+            backgroundColor: 'var(--bg-secondary)',
+            color: 'var(--text-muted)'
+          }}
+        >
           <span className="flex items-center gap-1">
-            <kbd className="px-1 py-0.5 bg-obsidian-surface rounded text-[10px]">↑↓</kbd> Navigate
+            <kbd
+              className="px-1 py-0.5 rounded text-[10px]"
+              style={{ backgroundColor: 'var(--bg-tertiary)' }}
+            >↑↓</kbd> Navigate
           </span>
           <span className="flex items-center gap-1">
-            <kbd className="px-1 py-0.5 bg-obsidian-surface rounded text-[10px]">↵</kbd> Select
+            <kbd
+              className="px-1 py-0.5 rounded text-[10px]"
+              style={{ backgroundColor: 'var(--bg-tertiary)' }}
+            >↵</kbd> Select
           </span>
           <span className="flex items-center gap-1">
-            <kbd className="px-1 py-0.5 bg-obsidian-surface rounded text-[10px]">Esc</kbd> Close
+            <kbd
+              className="px-1 py-0.5 rounded text-[10px]"
+              style={{ backgroundColor: 'var(--bg-tertiary)' }}
+            >esc</kbd> Close
           </span>
         </div>
       </div>

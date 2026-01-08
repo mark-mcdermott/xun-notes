@@ -2124,6 +2124,30 @@ tags: [""]
     const updateListener = EditorView.updateListener.of(update => {
       if (update.docChanged) {
         scheduleSave();
+
+        // Ensure there's always a line after code blocks
+        const doc = update.state.doc;
+        const lastLine = doc.line(doc.lines);
+        const lastLineText = lastLine.text.trim();
+
+        // If document ends with ``` (closing code block), add a newline
+        if (lastLineText === '```') {
+          // Count ``` to see if this is a closing one (even count means it's closing)
+          let backtickCount = 0;
+          for (let i = 1; i <= doc.lines; i++) {
+            if (doc.line(i).text.startsWith('```')) {
+              backtickCount++;
+            }
+          }
+          // Even count means the last ``` is a closing one
+          if (backtickCount % 2 === 0) {
+            setTimeout(() => {
+              update.view.dispatch({
+                changes: { from: doc.length, insert: '\n' }
+              });
+            }, 0);
+          }
+        }
       }
       if (update.selectionSet) {
         const pos = update.state.selection.main.head;

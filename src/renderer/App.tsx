@@ -35,7 +35,6 @@ import { LiveMarkdownEditor } from './components/LiveMarkdownEditor';
 import { TagBrowser } from './components/TagBrowser';
 import { TagView } from './components/TagView';
 import { DailyNotesNav } from './components/DailyNotesNav';
-import { CommandPalette } from './components/CommandPalette';
 import { Breadcrumb } from './components/Breadcrumb';
 import { PublishDialog } from './components/PublishDialog';
 import { PublishProgressPopup } from './components/PublishProgressPopup';
@@ -61,7 +60,6 @@ const App: React.FC = () => {
   const [activeTabIndex, setActiveTabIndex] = useState<number>(-1);
   const [showSettings, setShowSettings] = useState(false);
   const [dailyNoteDates, setDailyNoteDates] = useState<string[]>([]);
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [editorViewMode, setEditorViewMode] = useState<EditorViewMode>('editor');
   const [publishTag, setPublishTag] = useState<string | null>(null);
@@ -443,11 +441,6 @@ const App: React.FC = () => {
   // Global keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd+P or Ctrl+P to open command palette
-      if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
-        e.preventDefault();
-        setCommandPaletteOpen(true);
-      }
       // Cmd+, or Ctrl+, to open settings
       if ((e.metaKey || e.ctrlKey) && e.key === ',') {
         e.preventDefault();
@@ -829,20 +822,6 @@ const App: React.FC = () => {
       console.error('Failed to save remote draft:', err);
       throw err;
     }
-  };
-
-  const handleCommandPaletteFileSelect = async (path: string) => {
-    await handleFileClick(path);
-  };
-
-  const handleCommandPaletteTagSelect = (tag: string) => {
-    setSidebarTab('tags');
-    handleTagClick(tag);
-  };
-
-  const handleCommandPaletteDateSelect = async (date: string) => {
-    setSidebarTab('daily');
-    await handleDateSelect(date);
   };
 
   // Helper to find next available "Untitled" name
@@ -1363,19 +1342,6 @@ const App: React.FC = () => {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-obsidian-bg">
-      {/* Command Palette */}
-      <CommandPalette
-        isOpen={commandPaletteOpen}
-        onClose={() => setCommandPaletteOpen(false)}
-        fileTree={fileTree}
-        tags={tags}
-        onFileSelect={handleCommandPaletteFileSelect}
-        onTagSelect={handleCommandPaletteTagSelect}
-        onDateSelect={handleCommandPaletteDateSelect}
-        onCreateFile={handleCreateFile}
-        onCreateFolder={handleCreateFolder}
-      />
-
       {/* Publish Dialog */}
       {publishDialogOpen && publishTag && (
         <PublishDialog
@@ -1900,13 +1866,10 @@ const App: React.FC = () => {
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <div className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+              <div className="flex items-center justify-center mx-auto mb-4">
                 <FileText className="w-8 h-8" style={{ color: 'var(--text-muted)' }} strokeWidth={1.5} />
               </div>
-              <p style={{ color: 'var(--text-secondary)' }} className="mb-1">Select a file to view</p>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                Press <kbd className="px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>⌘P</kbd> to open command palette
-              </p>
+              <p style={{ color: 'var(--text-secondary)' }}>Select a file to view</p>
             </div>
           </div>
         )}
