@@ -42,6 +42,7 @@ import { SettingsPage } from './components/SettingsPage';
 import { CreateFileDialog } from './components/CreateFileDialog';
 import { VaultSelectionDialog } from './components/VaultSelectionDialog';
 import logoLeftFacing from './assets/pink-and-gray-mech-left.png';
+import { mechSayings } from './data/mechSayings';
 
 type SidebarTab = 'files' | 'tags' | 'daily';
 type EditorViewMode = 'markdown' | 'editor' | 'split' | 'preview';
@@ -84,6 +85,11 @@ const App: React.FC = () => {
 
   // Blog block publish progress state
   const [blogBlockPublishJobId, setBlogBlockPublishJobId] = useState<string | null>(null);
+
+  // Mech speech bubble state
+  const [mechSpeech, setMechSpeech] = useState<string | null>(null);
+  const [mechSpeechClosing, setMechSpeechClosing] = useState(false);
+  const mechSpeechTimeout = useRef<NodeJS.Timeout | null>(null);
   const [blogBlockPublishStatus, setBlogBlockPublishStatus] = useState<'pending' | 'preparing' | 'pushing' | 'building' | 'deploying' | 'completed' | 'failed'>('pending');
   const [blogBlockPublishProgress, setBlogBlockPublishProgress] = useState(0);
   const [blogBlockPublishSteps, setBlogBlockPublishSteps] = useState<Array<{ name: string; status: 'pending' | 'in_progress' | 'completed' | 'failed'; message?: string }>>([]);
@@ -882,6 +888,27 @@ const App: React.FC = () => {
     return `Untitled ${counter}`;
   };
 
+  // Mech easter egg click handler
+  const handleMechClick = () => {
+    // Clear any existing timeout
+    if (mechSpeechTimeout.current) {
+      clearTimeout(mechSpeechTimeout.current);
+    }
+    // Pick a random saying
+    const saying = mechSayings[Math.floor(Math.random() * mechSayings.length)];
+    setMechSpeechClosing(false);
+    setMechSpeech(saying);
+    // Start closing animation after 2 seconds
+    mechSpeechTimeout.current = setTimeout(() => {
+      setMechSpeechClosing(true);
+      // Remove after animation completes (300ms)
+      setTimeout(() => {
+        setMechSpeech(null);
+        setMechSpeechClosing(false);
+      }, 300);
+    }, 2000);
+  };
+
   const handleCreateFile = async () => {
     setSidebarTab('files');
     const name = getNextUntitledName('');
@@ -1387,7 +1414,7 @@ const App: React.FC = () => {
       />
 
       {/* Top bar - spans full width */}
-      <div className="h-[45px] flex items-center" style={{ backgroundColor: 'var(--tab-bar-bg)', borderBottom: '1px solid var(--border-primary)' }}>
+      <div className="h-[45px] flex items-center" style={{ backgroundColor: 'var(--tab-bar-bg)', borderBottom: '1px solid var(--border-primary)', overflow: 'visible' }}>
         {/* Left section - same width as both sidebars (44px + 1px border + 2px alignment + sidebarWidth, or just auto when collapsed) */}
         <div className="h-full flex items-center" style={{ width: sidebarCollapsed ? 'auto' : `${44 + 1 + 2 + sidebarWidth}px`, borderRight: sidebarCollapsed ? 'none' : '1px solid var(--border-primary)', WebkitAppRegion: 'drag' } as React.CSSProperties}>
           {/* macOS traffic light space */}
@@ -1490,8 +1517,95 @@ const App: React.FC = () => {
         </div>
 
         {/* Right side controls */}
-        <div className="flex items-center pr-3 gap-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-          <img src={logoLeftFacing} alt="Xun" style={{ height: '40px', width: 'auto', marginRight: '12px', marginTop: '1px' }} />
+        <div className="flex items-center gap-1 relative" style={{ WebkitAppRegion: 'no-drag', overflow: 'visible' } as React.CSSProperties}>
+          {/* Mech speech bubble */}
+          <style>{`
+            @keyframes mechBubbleIn {
+              0% { transform: translateY(-50%) translateX(80px); opacity: 0; }
+              25% { transform: translateY(-50%) translateX(60px); opacity: 1; }
+              50% { transform: translateY(-50%) translateX(40px); opacity: 1; }
+              75% { transform: translateY(-50%) translateX(20px); opacity: 1; }
+              100% { transform: translateY(-50%) translateX(0); opacity: 1; }
+            }
+            @keyframes mechBubbleOut {
+              0% { transform: translateY(-50%) translateX(0); opacity: 1; }
+              25% { transform: translateY(-50%) translateX(20px); opacity: 1; }
+              50% { transform: translateY(-50%) translateX(40px); opacity: 1; }
+              75% { transform: translateY(-50%) translateX(60px); opacity: 1; }
+              100% { transform: translateY(-50%) translateX(80px); opacity: 0; }
+            }
+          `}</style>
+          {mechSpeech && (
+            <div
+              style={{
+                position: 'absolute',
+                right: '60px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                backgroundColor: '#fff',
+                color: '#000',
+                padding: '6px 10px',
+                fontFamily: '"Press Start 2P", "Courier New", monospace',
+                fontSize: '8px',
+                lineHeight: '1.4',
+                border: '3px solid #000',
+                imageRendering: 'pixelated',
+                boxShadow: '4px 4px 0 #000',
+                whiteSpace: 'nowrap',
+                zIndex: 50,
+                animation: mechSpeechClosing ? 'mechBubbleOut 0.2s steps(4) forwards' : 'mechBubbleIn 0.2s steps(4) forwards',
+              }}
+            >
+              {mechSpeech}
+              {/* Speech bubble tail */}
+              <div
+                style={{
+                  position: 'absolute',
+                  right: '-10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: 0,
+                  height: 0,
+                  borderTop: '6px solid transparent',
+                  borderBottom: '6px solid transparent',
+                  borderLeft: '10px solid #000',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  right: '-6px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: 0,
+                  height: 0,
+                  borderTop: '4px solid transparent',
+                  borderBottom: '4px solid transparent',
+                  borderLeft: '7px solid #fff',
+                }}
+              />
+            </div>
+          )}
+          {/* Mech with gray background to hide bubble animation */}
+          <div
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              paddingLeft: '0',
+              paddingRight: '12px',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              position: 'relative',
+              zIndex: 60,
+            }}
+          >
+            <img
+              src={logoLeftFacing}
+              alt="Xun"
+              onClick={handleMechClick}
+              style={{ height: '40px', width: 'auto' }}
+            />
+          </div>
         </div>
       </div>
 
