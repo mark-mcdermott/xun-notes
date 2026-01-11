@@ -3,8 +3,8 @@
 
 export const mechSayings = [
   // Encouragement
-  'nice notes!',
-  'keep writing!',
+  'nice notes',
+  'keep writing',
   'have a good day',
   "you're doing great",
   'looking good',
@@ -37,22 +37,20 @@ export const mechSayings = [
 
   // Weather/time
   'nice day for notes',
-  'productive vibes',
   'good writing weather',
 
   // Food (why not)
   'coffee time?',
 
   // Hacker/tech movies & TV
-  'hack the planet!',
+  'hack the planet',
   'control is an illusion',
 
   // Robot/AI movies
   "i can't do that, dave",
   'multipass',
   'danger, will robinson',
-  'more human than human',
-  'johnny 5 is alive!',
+  'johnny 5 is alive',
   'primary directive?',
 
   // Buddhist wisdom
@@ -68,9 +66,6 @@ export const mechSayings = [
   'form is emptiness',
   "beginner's mind",
 
-  // Time travel movies & TV
-  'great scott!!',
-
   // Thich Nhat Hanh
   'smile, breathe, go slowly',
   'peace is every step',
@@ -80,29 +75,24 @@ export const mechSayings = [
 
   // Alan Watts
   'this is it',
+  'you can tell the true yogi by his laugh',
+  'there is no black without white',
+  'This is the most incredible nothing',
+  'Things are as they are',
+  'Reality is only a Rorschach ink-blot',
 
   // Pema Chodron
   'start where you are',
   'lean into discomfort',
 
   // Star Wars
-  'do or do not.',
+  'do or do not',
   'stay on target',
   "that's no moon",
   'fear leads to anger',
 
   // Rocky Horror
   "don't dream it, be it",
-  'antici... pation',
-
-  // David Lynch / Twin Peaks
-  'fire walk with me',
-  'damn fine cup of coffee',
-  'it is happening again',
-
-  // Jefferson Airplane
-  'feed your head',
-  'go ask alice',
 
   // Dark,
   'everything is connected',
@@ -113,7 +103,6 @@ export const mechSayings = [
   'nothing is real',
 
   // Aliens
-  'game over, man!',
   'nuke it from orbit',
 
   // Bill Hicks
@@ -121,9 +110,7 @@ export const mechSayings = [
   'squeegee your third eye',
 
   // Time paradox
-  'bootstrap paradox',
   'time is a flat circle',
-  'close your loop',
 
   // Bruce Lee
   'be water, my friend',
@@ -148,15 +135,8 @@ export const mechSayings = [
   'smile at fear',
 
   // Alan Alda
-  'listen with curiosity',
   'laugh at yourself',
   'assume good will',
-
-  // Hardcore Zen
-  'kill your idols',
-
-  // Subcomandante Marcos
-  '¡ya basta!',
 
   // Hakim Bey / T.A.Z.
   'poetic terrorism',
@@ -168,5 +148,14 @@ export const mechSayings = [
   'the abyss gazes back',
 
   // Dead Prez
-  "let's get free"
+  "let's get free",
+
+  // Vonnegut
+  'so it goes',
+
+  // Aristotle
+  'quality is not an act, it is a habit',
+
+  // Dogen
+  'Forgetting oneself is opening oneself'
 ];

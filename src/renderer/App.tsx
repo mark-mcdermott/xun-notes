@@ -48,6 +48,7 @@ import { useCart } from './stores/cart';
 import { CreateFileDialog } from './components/CreateFileDialog';
 import { VaultSelectionDialog } from './components/VaultSelectionDialog';
 import logoLeftFacing from './assets/pink-and-gray-mech-left.png';
+import logoRightFacing from './assets/pink-and-gray-mech-right.png';
 import { mechSayings } from './data/mechSayings';
 
 type SidebarTab = 'files' | 'tags' | 'daily';
@@ -1610,94 +1611,6 @@ const App: React.FC = () => {
 
         {/* Right side controls */}
         <div className="flex items-center gap-1 relative" style={{ WebkitAppRegion: 'no-drag', overflow: 'visible' } as React.CSSProperties}>
-          {/* Mech speech bubble */}
-          <style>{`
-            @keyframes mechBubbleIn {
-              0% { transform: translateY(-50%) translateX(80px); opacity: 0; }
-              25% { transform: translateY(-50%) translateX(60px); opacity: 1; }
-              50% { transform: translateY(-50%) translateX(40px); opacity: 1; }
-              75% { transform: translateY(-50%) translateX(20px); opacity: 1; }
-              100% { transform: translateY(-50%) translateX(0); opacity: 1; }
-            }
-            @keyframes mechBubbleOut {
-              0% { transform: translateY(-50%) translateX(0); opacity: 1; }
-              25% { transform: translateY(-50%) translateX(20px); opacity: 1; }
-              50% { transform: translateY(-50%) translateX(40px); opacity: 1; }
-              75% { transform: translateY(-50%) translateX(60px); opacity: 1; }
-              100% { transform: translateY(-50%) translateX(80px); opacity: 0; }
-            }
-          `}</style>
-          {mechSpeech && (
-            <div
-              style={{
-                position: 'absolute',
-                right: '60px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                backgroundColor: '#fff',
-                color: '#000',
-                padding: '6px 10px',
-                fontFamily: '"Press Start 2P", "Courier New", monospace',
-                fontSize: '8px',
-                lineHeight: '1.4',
-                border: '3px solid #000',
-                imageRendering: 'pixelated',
-                boxShadow: '4px 4px 0 #000',
-                whiteSpace: 'nowrap',
-                zIndex: 50,
-                animation: mechSpeechClosing ? 'mechBubbleOut 0.2s steps(4) forwards' : 'mechBubbleIn 0.2s steps(4) forwards',
-              }}
-            >
-              {mechSpeech}
-              {/* Speech bubble tail */}
-              <div
-                style={{
-                  position: 'absolute',
-                  right: '-10px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  width: 0,
-                  height: 0,
-                  borderTop: '6px solid transparent',
-                  borderBottom: '6px solid transparent',
-                  borderLeft: '10px solid #000',
-                }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  right: '-6px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  width: 0,
-                  height: 0,
-                  borderTop: '4px solid transparent',
-                  borderBottom: '4px solid transparent',
-                  borderLeft: '7px solid #fff',
-                }}
-              />
-            </div>
-          )}
-          {/* Mech with gray background to hide bubble animation */}
-          <div
-            style={{
-              backgroundColor: 'var(--bg-secondary)',
-              paddingLeft: '0',
-              paddingRight: '12px',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              position: 'relative',
-              zIndex: 60,
-            }}
-          >
-            <img
-              src={logoLeftFacing}
-              alt="Xun"
-              onClick={handleMechClick}
-              style={{ height: '40px', width: 'auto' }}
-            />
-          </div>
         </div>
       </div>
 
@@ -1815,6 +1728,85 @@ const App: React.FC = () => {
                 selectedTag={selectedTag}
                 onTagClick={handleTagClick}
               />
+            )}
+          </div>
+
+          {/* Mech above vault selector */}
+          <div style={{ padding: '37px 16px 0 16px', position: 'relative' }}>
+            <img
+              src={logoRightFacing}
+              alt="Xun"
+              onClick={handleMechClick}
+              style={{ height: '42px', width: 'auto', cursor: 'pointer', position: 'relative', zIndex: 51, top: '4px' }}
+            />
+            {/* Mech speech bubble */}
+            <style>{`
+              @keyframes mechBubbleIn {
+                0% { transform: translateY(-50%) translateX(-25px); opacity: 0; }
+                25% { transform: translateY(-50%) translateX(-19px); opacity: 1; }
+                50% { transform: translateY(-50%) translateX(-12px); opacity: 1; }
+                75% { transform: translateY(-50%) translateX(-6px); opacity: 1; }
+                100% { transform: translateY(-50%) translateX(0); opacity: 1; }
+              }
+              @keyframes mechBubbleOut {
+                0% { transform: translateY(-50%) translateX(0); opacity: 1; }
+                25% { transform: translateY(-50%) translateX(-6px); opacity: 1; }
+                50% { transform: translateY(-50%) translateX(-12px); opacity: 1; }
+                75% { transform: translateY(-50%) translateX(-19px); opacity: 1; }
+                100% { transform: translateY(-50%) translateX(-25px); opacity: 0; }
+              }
+            `}</style>
+            {mechSpeech && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '65px',
+                  top: 'calc(50% + 10px)',
+                  transform: 'translateY(-50%)',
+                  backgroundColor: '#fff',
+                  color: '#000',
+                  padding: '7px 10px 5px 10px',
+                  fontFamily: '"Press Start 2P", "Courier New", monospace',
+                  fontSize: '8px',
+                  lineHeight: '1.4',
+                  wordSpacing: '-1px',
+                  border: '3px solid #000',
+                  imageRendering: 'pixelated',
+                  boxShadow: '4px 4px 0 #000',
+                  whiteSpace: 'nowrap',
+                  zIndex: 50,
+                  animation: mechSpeechClosing ? 'mechBubbleOut 0.2s steps(4) forwards' : 'mechBubbleIn 0.2s steps(4) forwards',
+                }}
+              >
+                {mechSpeech}
+                {/* Speech bubble tail - pointing left */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '-10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: 0,
+                    height: 0,
+                    borderTop: '6px solid transparent',
+                    borderBottom: '6px solid transparent',
+                    borderRight: '10px solid #000',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '-6px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: 0,
+                    height: 0,
+                    borderTop: '4px solid transparent',
+                    borderBottom: '4px solid transparent',
+                    borderRight: '7px solid #fff',
+                  }}
+                />
+              </div>
             )}
           </div>
 
